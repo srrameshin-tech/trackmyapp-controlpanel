@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260728-1">
+<meta name="app-build" content="20260728-2">
 <meta name="theme-color" content="#0F1729">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -98,13 +98,11 @@ main{padding:16px;}
 <div id="pinLockScreen">
   <div class="pin-icon">🛡️</div>
   <h1>TRACKMYAPP CONTROL</h1>
-  <div class="sub">Master Admin Access — PIN required</div>
-  <div id="pinDotsRow"><span class="pindot"></span><span class="pindot"></span><span class="pindot"></span><span class="pindot"></span><span class="pindot"></span><span class="pindot"></span></div>
-  <div id="pinKeypad">
-    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
-    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
-    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
-    <button class="pin-action" data-k="clear">Clear</button><button data-k="0">0</button><button class="pin-action" data-k="back">⌫</button>
+  <div class="sub">Master Admin Access</div>
+  <div style="width:100%;max-width:320px;text-align:left;margin-top:10px;">
+    <div class="fgroup"><label>Admin Email</label><input type="email" id="loginEmail" placeholder="your admin email"></div>
+    <div class="fgroup"><label>Password</label><input type="password" id="loginPassword" placeholder="password"></div>
+    <button class="btn primary" style="width:100%;padding:13px;" onclick="doLogin()">Login</button>
   </div>
   <div id="pinLockError"></div>
 </div>
@@ -154,7 +152,7 @@ main{padding:16px;}
 <script type="module">
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, set, push, remove, update, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* ============ THIS PANEL'S OWN FIREBASE CONFIG ============ */
 const firebaseConfig = {
@@ -168,9 +166,6 @@ const db = getDatabase(fbApp);
 const auth = getAuth(fbApp);
 const ROOT = "controlPanel";
 
-const PIN_HASH_DEFAULT_SEED = "1234"; // seeded on first run if none set
-let pinBuffer = '';
-let currentPinHash = null;
 let customers = {};
 let editingCustomerId = null;
 let liveStatus = {}; // customerId -> {status:'active'|'suspended'|'unknown', checking:bool}
@@ -180,57 +175,39 @@ async function sha256(str){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-let resolveAuthReady;
-const authReadyPromise = new Promise(res=>{ resolveAuthReady = res; });
-onAuthStateChanged(auth, user=>{ if(user) resolveAuthReady(); });
-signInAnonymously(auth).catch(e=>console.error(e));
+onAuthStateChanged(auth, user=>{
+  if(user){
+    document.getElementById('pinLockScreen').style.display='none';
+    startDataListeners();
+  } else {
+    document.getElementById('pinLockScreen').style.display='flex';
+  }
+});
 
-async function init(){
-  await authReadyPromise;
-  onValue(ref(db, ROOT+'/pinHash'), async snap=>{
-    if(!snap.exists()){
-      const hash = await sha256(PIN_HASH_DEFAULT_SEED);
-      await set(ref(db, ROOT+'/pinHash'), hash);
-    } else {
-      currentPinHash = snap.val();
-    }
-  });
+window.doLogin = async function(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  if(!email || !pw){ document.getElementById('pinLockError').textContent='Enter email & password'; return; }
+  try{
+    await signInWithEmailAndPassword(auth, email, pw);
+    document.getElementById('pinLockError').textContent='';
+  }catch(err){
+    document.getElementById('pinLockError').textContent='Login failed — check email/password';
+  }
+};
+
+let listenersStarted = false;
+function startDataListeners(){
+  if(listenersStarted) return;
+  listenersStarted = true;
   onValue(ref(db, ROOT+'/customers'), snap=>{
     customers = snap.val() || {};
     renderCustomerList();
   });
 }
-init();
 
-/* ---------- PIN Lock ---------- */
-if(sessionStorage.getItem('cp_unlocked') === '1'){
-  document.getElementById('pinLockScreen').style.display = 'none';
-}
-function updatePinDots(){
-  document.querySelectorAll('#pinDotsRow .pindot').forEach((d,i)=> d.classList.toggle('filled', i < pinBuffer.length));
-}
-document.getElementById('pinKeypad').addEventListener('click', async e=>{
-  const btn = e.target.closest('button'); if(!btn) return;
-  const k = btn.dataset.k;
-  if(k==='clear'){ pinBuffer=''; updatePinDots(); document.getElementById('pinLockError').textContent=''; return; }
-  if(k==='back'){ pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); return; }
-  if(pinBuffer.length>=6) return;
-  pinBuffer += k;
-  updatePinDots();
-  if(pinBuffer.length===6){
-    const hash = await sha256(pinBuffer);
-    if(currentPinHash && hash===currentPinHash){
-      document.getElementById('pinLockScreen').style.display='none';
-      sessionStorage.setItem('cp_unlocked','1');
-    } else {
-      document.getElementById('pinLockError').textContent = 'Wrong PIN';
-      pinBuffer=''; setTimeout(updatePinDots,100);
-    }
-  }
-});
 window.lockApp = function(){
-  sessionStorage.removeItem('cp_unlocked');
-  location.reload();
+  signOut(auth);
 };
 
 /* ---------- Helpers ---------- */
