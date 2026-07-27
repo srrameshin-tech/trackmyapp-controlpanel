@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TrackMyApp — Control Panel</title>
+<meta name="app-build" content="20260728-1">
+<meta name="theme-color" content="#0F1729">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0F1729;
+  --surface:#182236;
+  --surface2:#212D45;
+  --accent:#3B82F6;
+  --accent2:#22D3A5;
+  --danger:#F0576B;
+  --warn:#F0A93B;
+  --text:#FFFFFF;
+  --muted:#8891A8;
+  --border:#2A3654;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;}
+h1,h2,.mono{font-family:'IBM Plex Mono',monospace;}
+#app{max-width:640px;margin:0 auto;min-height:100vh;padding-bottom:90px;}
+
+/* Login */
+#pinLockScreen{position:fixed;inset:0;background:radial-gradient(circle at 30% 20%, #1a2540, #0F1729 65%);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;}
+.pin-icon{width:64px;height:64px;border-radius:16px;background:var(--surface2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:16px;}
+#pinLockScreen h1{font-size:18px;margin:0 0 4px;letter-spacing:0.5px;}
+#pinLockScreen .sub{color:var(--muted);font-size:13px;margin-bottom:22px;}
+.pindot{width:13px;height:13px;border-radius:50%;border:2px solid rgba(59,130,246,0.5);transition:all .15s;}
+.pindot.filled{background:var(--accent);border-color:var(--accent);}
+#pinDotsRow{display:flex;gap:12px;margin-bottom:22px;}
+#pinKeypad{display:grid;grid-template-columns:repeat(3,68px);gap:12px;}
+#pinKeypad button{width:68px;height:68px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:#fff;font-size:20px;font-weight:700;font-family:'IBM Plex Mono';}
+#pinKeypad button.pin-action{background:none;border:none;font-size:13px;font-weight:600;color:var(--muted);}
+#pinKeypad button:active{background:var(--surface);}
+#pinLockError{color:var(--danger);font-size:13px;height:18px;margin-top:14px;}
+
+header{padding:20px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;display:flex;justify-content:space-between;align-items:center;}
+header h1{font-size:16px;margin:0;letter-spacing:0.3px;}
+header .sub{color:var(--muted);font-size:11.5px;margin-top:2px;}
+header button{background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:36px;height:36px;border-radius:9px;font-size:15px;}
+
+main{padding:16px;}
+.summary-row{display:flex;gap:10px;margin-bottom:16px;}
+.summary-box{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
+.summary-box .num{font-size:20px;font-weight:800;font-family:'IBM Plex Mono';}
+.summary-box .lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;margin-top:2px;}
+.summary-box.active .num{color:var(--accent2);}
+.summary-box.suspended .num{color:var(--danger);}
+
+.customer-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;}
+.customer-card .ct-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.customer-card .ct-name{font-weight:700;font-size:15.5px;}
+.customer-card .ct-link{font-size:12px;color:var(--accent);text-decoration:none;word-break:break-all;}
+.status-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.3px;}
+.status-badge.active{background:rgba(34,211,165,0.15);color:var(--accent2);}
+.status-badge.suspended{background:rgba(240,87,107,0.15);color:var(--danger);}
+.status-badge.unknown{background:rgba(136,145,168,0.15);color:var(--muted);}
+.ct-meta{font-size:12px;color:var(--muted);margin-bottom:12px;}
+.ct-actions{display:flex;flex-wrap:wrap;gap:8px;}
+.ct-actions button{padding:9px 14px;border-radius:9px;font-size:12.5px;font-weight:600;border:1px solid var(--border);background:var(--surface2);color:var(--text);}
+.ct-actions button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.ct-actions button.danger-btn{background:var(--danger);border-color:var(--danger);color:#fff;}
+.ct-actions button.ghost{color:var(--muted);}
+
+.fab{position:fixed;bottom:22px;right:calc(50% - 320px + 18px);width:58px;height:58px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:28px;box-shadow:0 6px 18px rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;}
+@media (max-width:660px){.fab{right:18px;}}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:flex-end;justify-content:center;z-index:100;}
+.overlay.show{display:flex;}
+.sheet{background:var(--surface);width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:22px;max-height:88vh;overflow-y:auto;border-top:1px solid var(--border);}
+.sheet h2{font-size:16px;margin:0 0 16px;}
+.fgroup{margin-bottom:14px;}
+.fgroup label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;display:block;margin-bottom:6px;font-weight:700;}
+.fgroup input, .fgroup textarea, .fgroup select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 12px;color:var(--text);font-size:14px;font-family:'Inter';}
+.fgroup textarea{resize:vertical;min-height:50px;}
+.sheet-actions{display:flex;gap:10px;margin-top:8px;}
+.btn{flex:1;padding:12px;border-radius:9px;border:none;font-size:14px;font-weight:700;}
+.btn.primary{background:var(--accent);color:#fff;}
+.btn.ghost{background:none;border:1px solid var(--border);color:var(--muted);}
+
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted);}
+.toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--accent);color:#fff;padding:11px 20px;border-radius:24px;font-size:13px;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s;}
+.toast.show{opacity:1;}
+#updateBanner{display:none;position:fixed;top:0;left:0;right:0;background:var(--accent2);color:#0F1729;text-align:center;padding:8px;font-size:12px;z-index:300;font-weight:700;}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div id="updateBanner">New version available — reloading…</div>
+
+<div id="pinLockScreen">
+  <div class="pin-icon">🛡️</div>
+  <h1>TRACKMYAPP CONTROL</h1>
+  <div class="sub">Master Admin Access — PIN required</div>
+  <div id="pinDotsRow"><span class="pindot"></span><span class="pindot"></span><span class="pindot"></span><span class="pindot"></span><span class="pindot"></span><span class="pindot"></span></div>
+  <div id="pinKeypad">
+    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+    <button class="pin-action" data-k="clear">Clear</button><button data-k="0">0</button><button class="pin-action" data-k="back">⌫</button>
+  </div>
+  <div id="pinLockError"></div>
+</div>
+
+<div id="app">
+  <header>
+    <div>
+      <h1>TrackMyApp Control</h1>
+      <div class="sub">Master Admin Panel</div>
+    </div>
+    <button onclick="lockApp()">⏻</button>
+  </header>
+  <main>
+    <div class="summary-row">
+      <div class="summary-box"><div class="num" id="summaryTotal">0</div><div class="lbl">Total Apps</div></div>
+      <div class="summary-box active"><div class="num" id="summaryActive">0</div><div class="lbl">Active</div></div>
+      <div class="summary-box suspended"><div class="num" id="summarySuspended">0</div><div class="lbl">Suspended</div></div>
+    </div>
+    <div id="customerList"></div>
+  </main>
+  <button class="fab" onclick="openCustomerModal()">+</button>
+</div>
+
+<!-- Add/Edit Customer Modal -->
+<div class="overlay" id="customerModal">
+  <div class="sheet">
+    <h2 id="customerModalTitle">Add Customer App</h2>
+    <div class="fgroup"><label>Company Name</label><input id="custCompanyName" placeholder="e.g. GNS CABS"></div>
+    <div class="fgroup"><label>App Type / Label</label><input id="custAppType" placeholder="e.g. Travel Tracker"></div>
+    <div class="fgroup"><label>Live App URL</label><input id="custSubdomain" placeholder="e.g. https://gnscab.trackmyapp.in"></div>
+    <div class="fgroup"><label>Firebase apiKey</label><input id="custApiKey" placeholder="AIzaSy..."></div>
+    <div class="fgroup"><label>Firebase databaseURL</label><input id="custDbUrl" placeholder="https://xxx-default-rtdb...firebasedatabase.app"></div>
+    <div class="fgroup"><label>Firebase Root Path (data node)</label><input id="custRootPath" placeholder="e.g. travelTracker"></div>
+    <div class="fgroup"><label>Admin Login Email (that app's admin)</label><input id="custAdminEmail" placeholder="admin@..."></div>
+    <div class="fgroup"><label>Admin Login Password</label><input id="custAdminPassword" placeholder="Admin password"></div>
+    <div class="fgroup"><label>GitHub Account / Repo (notes)</label><input id="custGithubInfo" placeholder="e.g. gnscabs-tech/travel-tracker"></div>
+    <div class="fgroup"><label>Notes</label><textarea id="custNotes" placeholder="Contact person, phone, pricing etc."></textarea></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('customerModal')">Cancel</button>
+      <button class="btn primary" onclick="saveCustomer()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, set, push, remove, update, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+/* ============ THIS PANEL'S OWN FIREBASE CONFIG ============ */
+const firebaseConfig = {
+  apiKey: "PLACEHOLDER_API_KEY",
+  databaseURL: "PLACEHOLDER_DATABASE_URL"
+};
+/* ============================================================ */
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(fbApp);
+const auth = getAuth(fbApp);
+const ROOT = "controlPanel";
+
+const PIN_HASH_DEFAULT_SEED = "1234"; // seeded on first run if none set
+let pinBuffer = '';
+let currentPinHash = null;
+let customers = {};
+let editingCustomerId = null;
+let liveStatus = {}; // customerId -> {status:'active'|'suspended'|'unknown', checking:bool}
+
+async function sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+let resolveAuthReady;
+const authReadyPromise = new Promise(res=>{ resolveAuthReady = res; });
+onAuthStateChanged(auth, user=>{ if(user) resolveAuthReady(); });
+signInAnonymously(auth).catch(e=>console.error(e));
+
+async function init(){
+  await authReadyPromise;
+  onValue(ref(db, ROOT+'/pinHash'), async snap=>{
+    if(!snap.exists()){
+      const hash = await sha256(PIN_HASH_DEFAULT_SEED);
+      await set(ref(db, ROOT+'/pinHash'), hash);
+    } else {
+      currentPinHash = snap.val();
+    }
+  });
+  onValue(ref(db, ROOT+'/customers'), snap=>{
+    customers = snap.val() || {};
+    renderCustomerList();
+  });
+}
+init();
+
+/* ---------- PIN Lock ---------- */
+if(sessionStorage.getItem('cp_unlocked') === '1'){
+  document.getElementById('pinLockScreen').style.display = 'none';
+}
+function updatePinDots(){
+  document.querySelectorAll('#pinDotsRow .pindot').forEach((d,i)=> d.classList.toggle('filled', i < pinBuffer.length));
+}
+document.getElementById('pinKeypad').addEventListener('click', async e=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  const k = btn.dataset.k;
+  if(k==='clear'){ pinBuffer=''; updatePinDots(); document.getElementById('pinLockError').textContent=''; return; }
+  if(k==='back'){ pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); return; }
+  if(pinBuffer.length>=6) return;
+  pinBuffer += k;
+  updatePinDots();
+  if(pinBuffer.length===6){
+    const hash = await sha256(pinBuffer);
+    if(currentPinHash && hash===currentPinHash){
+      document.getElementById('pinLockScreen').style.display='none';
+      sessionStorage.setItem('cp_unlocked','1');
+    } else {
+      document.getElementById('pinLockError').textContent = 'Wrong PIN';
+      pinBuffer=''; setTimeout(updatePinDots,100);
+    }
+  }
+});
+window.lockApp = function(){
+  sessionStorage.removeItem('cp_unlocked');
+  location.reload();
+};
+
+/* ---------- Helpers ---------- */
+function showToast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+window.closeModal = function(id){ document.getElementById(id).classList.remove('show'); };
+document.querySelectorAll('.overlay').forEach(o=> o.addEventListener('click', e=>{ if(e.target===o) o.classList.remove('show'); }));
+
+/* ---------- Customer Registry CRUD ---------- */
+function renderCustomerList(){
+  const ids = Object.keys(customers);
+  document.getElementById('summaryTotal').textContent = ids.length;
+  let activeCount=0, suspCount=0;
+  ids.forEach(id=>{ const s=(liveStatus[id]||{}).status; if(s==='active') activeCount++; if(s==='suspended') suspCount++; });
+  document.getElementById('summaryActive').textContent = activeCount;
+  document.getElementById('summarySuspended').textContent = suspCount;
+
+  const container = document.getElementById('customerList');
+  if(!ids.length){ container.innerHTML = '<div class="empty-state">No customer apps yet.<br>Tap + to add one.</div>'; return; }
+  container.innerHTML = ids.map(id=>{
+    const c = customers[id];
+    const st = liveStatus[id] || {status:'unknown', checking:false};
+    const badgeClass = st.status;
+    const badgeText = st.checking ? '<span class="spinner"></span>' : st.status.toUpperCase();
+    return `<div class="customer-card">
+      <div class="ct-top">
+        <div>
+          <div class="ct-name">${c.companyName}</div>
+          <a class="ct-link" href="${c.subdomain}" target="_blank">${c.subdomain||''}</a>
+        </div>
+        <span class="status-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="ct-meta">${c.appType||'App'} ${c.githubInfo ? ' · '+c.githubInfo : ''}</div>
+      <div class="ct-actions">
+        <button onclick="checkStatus('${id}')">🔄 Check Status</button>
+        <button class="primary" onclick="toggleLicense('${id}', true)">✅ Enable</button>
+        <button class="danger-btn" onclick="toggleLicense('${id}', false)">⛔ Suspend</button>
+        <button class="ghost" onclick="editCustomer('${id}')">Edit</button>
+        <button class="ghost" onclick="deleteCustomer('${id}')" style="color:var(--danger);">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.openCustomerModal = function(){
+  editingCustomerId = null;
+  document.getElementById('customerModalTitle').textContent = 'Add Customer App';
+  ['custCompanyName','custAppType','custSubdomain','custApiKey','custDbUrl','custRootPath','custAdminEmail','custAdminPassword','custGithubInfo','custNotes'].forEach(id=> document.getElementById(id).value='');
+  document.getElementById('customerModal').classList.add('show');
+};
+window.editCustomer = function(id){
+  editingCustomerId = id;
+  const c = customers[id];
+  document.getElementById('customerModalTitle').textContent = 'Edit Customer App';
+  document.getElementById('custCompanyName').value = c.companyName||'';
+  document.getElementById('custAppType').value = c.appType||'';
+  document.getElementById('custSubdomain').value = c.subdomain||'';
+  document.getElementById('custApiKey').value = c.apiKey||'';
+  document.getElementById('custDbUrl').value = c.dbUrl||'';
+  document.getElementById('custRootPath').value = c.rootPath||'';
+  document.getElementById('custAdminEmail').value = c.adminEmail||'';
+  document.getElementById('custAdminPassword').value = c.adminPassword||'';
+  document.getElementById('custGithubInfo').value = c.githubInfo||'';
+  document.getElementById('custNotes').value = c.notes||'';
+  document.getElementById('customerModal').classList.add('show');
+};
+window.saveCustomer = async function(){
+  const companyName = document.getElementById('custCompanyName').value.trim();
+  if(!companyName){ showToast('Enter company name'); return; }
+  const data = {
+    companyName,
+    appType: document.getElementById('custAppType').value.trim(),
+    subdomain: document.getElementById('custSubdomain').value.trim(),
+    apiKey: document.getElementById('custApiKey').value.trim(),
+    dbUrl: document.getElementById('custDbUrl').value.trim(),
+    rootPath: document.getElementById('custRootPath').value.trim(),
+    adminEmail: document.getElementById('custAdminEmail').value.trim(),
+    adminPassword: document.getElementById('custAdminPassword').value.trim(),
+    githubInfo: document.getElementById('custGithubInfo').value.trim(),
+    notes: document.getElementById('custNotes').value.trim()
+  };
+  if(editingCustomerId){ await update(ref(db, ROOT+'/customers/'+editingCustomerId), data); }
+  else{ await set(push(ref(db, ROOT+'/customers')), data); }
+  closeModal('customerModal'); showToast('Customer saved');
+};
+window.deleteCustomer = async function(id){
+  if(!confirm('Delete this customer from the control panel? (Does NOT delete their live app)')) return;
+  await remove(ref(db, ROOT+'/customers/'+id)); showToast('Removed from panel');
+};
+
+/* ---------- Remote Status Check / License Toggle ---------- */
+async function withCustomerFirebase(id, callback){
+  const c = customers[id];
+  if(!c.apiKey || !c.dbUrl || !c.adminEmail || !c.adminPassword || !c.rootPath){
+    showToast('Missing Firebase/admin details for this customer'); return;
+  }
+  const instanceName = 'cust_'+id;
+  let custApp;
+  try{
+    custApp = initializeApp({apiKey:c.apiKey, databaseURL:c.dbUrl}, instanceName);
+  }catch(e){
+    custApp = initializeApp({apiKey:c.apiKey, databaseURL:c.dbUrl}, instanceName+'_'+Date.now());
+  }
+  const custAuth = getAuth(custApp);
+  const custDb = getDatabase(custApp);
+  try{
+    await signInWithEmailAndPassword(custAuth, c.adminEmail, c.adminPassword);
+    await callback(custDb, c.rootPath);
+  } catch(err){
+    console.error(err);
+    showToast('Connection failed — check credentials');
+  } finally {
+    try{ await signOut(custAuth); }catch(e){}
+    try{ await deleteApp(custApp); }catch(e){}
+  }
+}
+
+window.checkStatus = async function(id){
+  liveStatus[id] = {status: (liveStatus[id]||{}).status || 'unknown', checking:true};
+  renderCustomerList();
+  await withCustomerFirebase(id, async (custDb, rootPath)=>{
+    const snap = await get(ref(custDb, rootPath+'/license'));
+    const lic = snap.val() || {active:true};
+    let status = 'active';
+    if(lic.active === false) status = 'suspended';
+    else if(lic.expiryDate && new Date().toISOString().slice(0,10) > lic.expiryDate) status = 'suspended';
+    liveStatus[id] = {status, checking:false};
+  });
+  if(liveStatus[id].checking) liveStatus[id] = {status:'unknown', checking:false};
+  renderCustomerList();
+};
+
+window.toggleLicense = async function(id, makeActive){
+  if(!confirm(makeActive ? "Enable this customer's app?" : "Suspend this customer's app? They will be locked out immediately.")) return;
+  liveStatus[id] = {status: (liveStatus[id]||{}).status||'unknown', checking:true};
+  renderCustomerList();
+  await withCustomerFirebase(id, async (custDb, rootPath)=>{
+    await update(ref(custDb, rootPath+'/license'), {active: makeActive});
+    liveStatus[id] = {status: makeActive?'active':'suspended', checking:false};
+  });
+  if(liveStatus[id].checking) liveStatus[id] = {status:'unknown', checking:false};
+  renderCustomerList();
+  showToast(makeActive ? 'App enabled' : 'App suspended');
+};
+
+/* ---------- Service Worker + Auto Update ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js'));
+}
+const CURRENT_BUILD = document.querySelector('meta[name="app-build"]').content;
+async function checkForUpdate(){
+  try{
+    const res = await fetch('./index.html?ts='+Date.now(), {cache:'no-store'});
+    const html = await res.text();
+    const match = html.match(/<meta name="app-build" content="([^"]+)"/);
+    if(match && match[1] !== CURRENT_BUILD){
+      document.getElementById('updateBanner').style.display='block';
+      setTimeout(()=>location.reload(true), 2000);
+    }
+  }catch(e){}
+}
+setInterval(checkForUpdate, 15000);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkForUpdate(); });
+window.addEventListener('focus', checkForUpdate);
+</script>
+</body>
+</html>
