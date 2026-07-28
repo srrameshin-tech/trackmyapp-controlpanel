@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260728-5">
+<meta name="app-build" content="20260728-6">
 <meta name="theme-color" content="#0F1729">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -275,6 +275,7 @@ function renderCustomerList(){
         <button onclick="checkStatus('${id}')">🔄 Check Status</button>
         <button class="primary" onclick="toggleLicense('${id}', true)">✅ Enable</button>
         <button class="danger-btn" onclick="toggleLicense('${id}', false)">⛔ Suspend</button>
+        <button style="background:#3B2E5C;color:#C4B5FD;border-color:#5B4A8A;" onclick="resetCustomerPin('${id}')">🔑 Reset PIN</button>
         <button class="ghost" onclick="editCustomer('${id}')">Edit</button>
         <button class="ghost" onclick="deleteCustomer('${id}')" style="color:var(--danger);">Delete</button>
       </div>
@@ -383,6 +384,21 @@ window.toggleLicense = async function(id, makeActive){
   if(liveStatus[id].checking) liveStatus[id] = {status:'unknown', checking:false};
   renderCustomerList();
   showToast(makeActive ? 'App enabled' : 'App suspended');
+};
+
+async function sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+window.resetCustomerPin = async function(id){
+  const pin = prompt("Enter new 4-digit PIN for "+(customers[id]?.companyName||'this customer')+":");
+  if(!pin) return;
+  if(!/^\d{4}$/.test(pin)){ showToast('PIN must be exactly 4 digits'); return; }
+  const hash = await sha256(pin);
+  await withCustomerFirebase(id, async (custDb, rootPath)=>{
+    await update(ref(custDb, rootPath+'/config'), {pinHash: hash});
+  });
+  showToast('PIN reset to '+pin);
 };
 
 /* ---------- Service Worker + Auto Update ---------- */
