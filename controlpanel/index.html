@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260728-3">
+<meta name="app-build" content="20260728-4">
 <meta name="theme-color" content="#0F1729">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -49,9 +49,11 @@ main{padding:16px;}
 .summary-row{display:flex;gap:10px;margin-bottom:16px;}
 .summary-box{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
 .summary-box .num{font-size:20px;font-weight:800;font-family:'IBM Plex Mono';}
-.summary-box .lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;margin-top:2px;}
-.summary-box.active .num{color:var(--accent2);}
-.summary-box.suspended .num{color:var(--danger);}
+.summary-box .lbl{font-size:10.5px;color:#FFD166;text-transform:uppercase;letter-spacing:0.3px;margin-top:2px;font-weight:700;}
+.summary-box.active .num{color:#4ADE80;}
+.summary-box.suspended .num{color:#FB7185;}
+.summary-box.active .lbl{color:#4ADE80;}
+.summary-box.suspended .lbl{color:#FB7185;}
 
 .customer-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;}
 .customer-card .ct-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
@@ -61,12 +63,13 @@ main{padding:16px;}
 .status-badge.active{background:rgba(34,211,165,0.15);color:var(--accent2);}
 .status-badge.suspended{background:rgba(240,87,107,0.15);color:var(--danger);}
 .status-badge.unknown{background:rgba(136,145,168,0.15);color:var(--muted);}
-.ct-meta{font-size:12px;color:var(--muted);margin-bottom:12px;}
+.ct-meta{font-size:12px;color:#67E8F9;margin-bottom:12px;font-weight:600;}
+.ct-activity{font-size:12px;color:#C4B5FD;margin-bottom:12px;font-weight:600;margin-top:-6px;}
 .ct-actions{display:flex;flex-wrap:wrap;gap:8px;}
 .ct-actions button{padding:9px 14px;border-radius:9px;font-size:12.5px;font-weight:600;border:1px solid var(--border);background:var(--surface2);color:var(--text);}
 .ct-actions button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
 .ct-actions button.danger-btn{background:var(--danger);border-color:var(--danger);color:#fff;}
-.ct-actions button.ghost{color:var(--muted);}
+.ct-actions button.ghost{color:#A3E635;font-weight:700;}
 
 .fab{position:fixed;bottom:22px;right:calc(50% - 320px + 18px);width:58px;height:58px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:28px;box-shadow:0 6px 18px rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;}
 @media (max-width:660px){.fab{right:18px;}}
@@ -253,7 +256,7 @@ function renderCustomerList(){
         <span class="status-badge ${badgeClass}">${badgeText}</span>
       </div>
       <div class="ct-meta">${c.appType||'App'} ${c.githubInfo ? ' · '+c.githubInfo : ''}</div>
-      ${(st.lastActive || st.totalEntries !== undefined || st.expiryDate) ? `<div class="ct-meta" style="margin-top:-6px;">${st.lastActive ? '🕒 Last active: '+timeAgo(st.lastActive) : ''}${st.totalEntries !== undefined ? ' &nbsp;·&nbsp; 📋 '+st.totalEntries+' entries' : ''}${st.expiryDate ? ' &nbsp;·&nbsp; ⏳ Expires '+st.expiryDate : ''}</div>` : ''}
+      ${(st.lastActive || st.totalEntries !== undefined || st.expiryDate) ? `<div class="ct-activity">${st.lastActive ? '🕒 Last active: '+timeAgo(st.lastActive) : ''}${st.totalEntries !== undefined ? ' &nbsp;·&nbsp; 📋 '+st.totalEntries+' entries' : ''}${st.expiryDate ? ' &nbsp;·&nbsp; ⏳ Expires '+st.expiryDate : ''}</div>` : ''}
       <div class="ct-actions">
         <button onclick="checkStatus('${id}')">🔄 Check Status</button>
         <button class="primary" onclick="toggleLicense('${id}', true)">✅ Enable</button>
