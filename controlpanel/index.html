@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260728-4">
+<meta name="app-build" content="20260728-5">
 <meta name="theme-color" content="#0F1729">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -200,12 +200,17 @@ window.doLogin = async function(){
 };
 
 let listenersStarted = false;
+let autoCheckedOnce = false;
 function startDataListeners(){
   if(listenersStarted) return;
   listenersStarted = true;
   onValue(ref(db, ROOT+'/customers'), snap=>{
     customers = snap.val() || {};
     renderCustomerList();
+    if(!autoCheckedOnce){
+      autoCheckedOnce = true;
+      Object.keys(customers).forEach(id=> checkStatus(id));
+    }
   });
 }
 
@@ -214,6 +219,14 @@ window.lockApp = function(){
 };
 
 /* ---------- Helpers ---------- */
+function countdownHTML(expiryDate){
+  const days = Math.ceil((new Date(expiryDate) - new Date()) / 86400000);
+  let color = '#4ADE80', text = days+' days left';
+  if(days < 0){ color = '#FB7185'; text = 'Expired '+Math.abs(days)+'d ago'; }
+  else if(days <= 7){ color = '#FB7185'; }
+  else if(days <= 30){ color = '#FFD166'; }
+  return `<div style="font-size:12px;font-weight:700;color:${color};margin-bottom:12px;">⏳ ${text} (${expiryDate})</div>`;
+}
 function timeAgo(isoString){
   const diffMs = Date.now() - new Date(isoString).getTime();
   const mins = Math.floor(diffMs/60000);
@@ -256,7 +269,8 @@ function renderCustomerList(){
         <span class="status-badge ${badgeClass}">${badgeText}</span>
       </div>
       <div class="ct-meta">${c.appType||'App'} ${c.githubInfo ? ' · '+c.githubInfo : ''}</div>
-      ${(st.lastActive || st.totalEntries !== undefined || st.expiryDate) ? `<div class="ct-activity">${st.lastActive ? '🕒 Last active: '+timeAgo(st.lastActive) : ''}${st.totalEntries !== undefined ? ' &nbsp;·&nbsp; 📋 '+st.totalEntries+' entries' : ''}${st.expiryDate ? ' &nbsp;·&nbsp; ⏳ Expires '+st.expiryDate : ''}</div>` : ''}
+      ${(st.lastActive || st.totalEntries !== undefined || st.expiryDate) ? `<div class="ct-activity">${st.lastActive ? '🕒 Last active: '+timeAgo(st.lastActive) : ''}${st.totalEntries !== undefined ? ' &nbsp;·&nbsp; 📋 '+st.totalEntries+' entries' : ''}</div>` : ''}
+      ${st.expiryDate ? countdownHTML(st.expiryDate) : ''}
       <div class="ct-actions">
         <button onclick="checkStatus('${id}')">🔄 Check Status</button>
         <button class="primary" onclick="toggleLicense('${id}', true)">✅ Enable</button>
