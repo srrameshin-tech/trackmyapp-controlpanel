@@ -386,10 +386,6 @@ window.toggleLicense = async function(id, makeActive){
   showToast(makeActive ? 'App enabled' : 'App suspended');
 };
 
-async function sha256(str){
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
 window.resetCustomerPin = async function(id){
   const pin = prompt("Enter new 4-digit PIN for "+(customers[id]?.companyName||'this customer')+":");
   if(!pin) return;
