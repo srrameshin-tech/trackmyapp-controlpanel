@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260728-6">
+<meta name="app-build" content="20260728-7">
 <meta name="theme-color" content="#0F1729">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -276,6 +276,7 @@ function renderCustomerList(){
         <button class="primary" onclick="toggleLicense('${id}', true)">✅ Enable</button>
         <button class="danger-btn" onclick="toggleLicense('${id}', false)">⛔ Suspend</button>
         <button style="background:#3B2E5C;color:#C4B5FD;border-color:#5B4A8A;" onclick="resetCustomerPin('${id}')">🔑 Reset PIN</button>
+        <button style="background:#2E3B1C;color:#BEF264;border-color:#4A5B2E;" onclick="setActiveDays('${id}')">📅 Set Active Days</button>
         <button class="ghost" onclick="editCustomer('${id}')">Edit</button>
         <button class="ghost" onclick="deleteCustomer('${id}')" style="color:var(--danger);">Delete</button>
       </div>
@@ -395,6 +396,28 @@ window.resetCustomerPin = async function(id){
     await update(ref(custDb, rootPath+'/config'), {pinHash: hash});
   });
   showToast('PIN reset to '+pin);
+};
+
+window.setActiveDays = async function(id){
+  const companyName = customers[id]?.companyName || 'this customer';
+  const daysStr = prompt("How many days should "+companyName+"'s app stay active from today?\n(e.g. 30, 90, 365)");
+  if(!daysStr) return;
+  const days = parseInt(daysStr, 10);
+  if(!days || days <= 0){ showToast('Enter a valid number of days'); return; }
+  const today = new Date();
+  const expiry = new Date(today);
+  expiry.setDate(today.getDate() + days);
+  const expiryDate = expiry.toISOString().slice(0,10);
+  const lastPayment = today.toISOString().slice(0,10);
+  liveStatus[id] = {status: (liveStatus[id]||{}).status||'unknown', checking:true};
+  renderCustomerList();
+  await withCustomerFirebase(id, async (custDb, rootPath)=>{
+    await update(ref(custDb, rootPath+'/license'), {active:true, expiryDate, lastPayment});
+    liveStatus[id] = {status:'active', checking:false, expiryDate};
+  });
+  if(liveStatus[id].checking) liveStatus[id] = {status:'unknown', checking:false};
+  renderCustomerList();
+  showToast('Active for '+days+' days — expires '+expiryDate);
 };
 
 /* ---------- Service Worker + Auto Update ---------- */
