@@ -3,17 +3,403 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrackMyApp</title>
+<title>TrackMyApp — Your ledger, now an app</title>
+<meta name="description" content="We turn the Excel sheets and notebooks small businesses run on into simple, custom mobile apps. No coding, no complexity.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-  body{margin:0;min-height:100vh;background:#0F1729;color:#fff;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;}
-  h1{font-size:28px;}
-  p{color:#8891A8;}
+  :root{
+    --bg:#0B1220;
+    --surface:#121B2E;
+    --surface-2:#1A2540;
+    --line: rgba(255,255,255,0.08);
+    --ink:#F2EFE9;
+    --ink-muted:#8A93AC;
+    --amber:#FF9F1C;
+    --amber-soft: rgba(255,159,28,0.14);
+    --blue:#3E63DD;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.display{
+    font-family:'Poppins',sans-serif;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .mono{ font-family:'JetBrains Mono',monospace; letter-spacing:0.02em; }
+  a{color:inherit;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+
+  /* ---------- NAV ---------- */
+  nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:20px 24px;
+    position:sticky;top:0;z-index:50;
+    background:linear-gradient(180deg, rgba(11,18,32,0.92), rgba(11,18,32,0.75) 80%, transparent);
+    backdrop-filter:blur(10px);
+  }
+  .logo{font-family:'Poppins',sans-serif;font-weight:700;font-size:18px;display:flex;align-items:center;gap:8px;}
+  .logo .dot{width:8px;height:8px;border-radius:50%;background:var(--amber);}
+  .nav-cta{
+    font-size:14px;font-weight:600;
+    background:var(--amber);color:#1A1204;
+    padding:9px 18px;border-radius:8px;
+    text-decoration:none;
+    white-space:nowrap;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    padding:56px 0 40px;
+    position:relative;
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;color:var(--amber);
+    background:var(--amber-soft);
+    border:1px solid rgba(255,159,28,0.3);
+    padding:6px 12px;border-radius:100px;
+    margin-bottom:22px;
+  }
+  .hero h1{
+    font-size:clamp(32px,7vw,52px);
+    font-weight:700;
+    line-height:1.12;
+    max-width:11ch;
+  }
+  .hero h1 em{
+    font-style:normal;
+    color:var(--amber);
+  }
+  .hero p.sub{
+    margin-top:20px;
+    font-size:17px;
+    line-height:1.6;
+    color:var(--ink-muted);
+    max-width:480px;
+  }
+  .hero-ctas{margin-top:30px;display:flex;gap:12px;flex-wrap:wrap;}
+  .btn-primary{
+    background:var(--amber);color:#1A1204;
+    font-weight:600;font-size:15px;
+    padding:14px 24px;border-radius:10px;
+    text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-ghost{
+    border:1px solid var(--line);color:var(--ink);
+    font-weight:600;font-size:15px;
+    padding:14px 24px;border-radius:10px;
+    text-decoration:none;
+  }
+
+  /* ---------- SIGNATURE VISUAL: ledger -> app ---------- */
+  .transform{
+    margin-top:56px;
+    display:flex;align-items:center;justify-content:center;gap:0;
+    flex-wrap:wrap;
+    position:relative;
+  }
+  .ledger{
+    width:230px;height:300px;
+    background:#F2EFE9;
+    border-radius:6px;
+    box-shadow:0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.05);
+    padding:22px 20px;
+    color:#2B2620;
+    transform:rotate(-3deg);
+    position:relative;
+    flex-shrink:0;
+  }
+  .ledger::before{
+    content:"";
+    position:absolute;left:38px;top:0;bottom:0;width:1px;
+    background:rgba(200,60,60,0.35);
+  }
+  .ledger-head{font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A7F6B;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;}
+  .ledger-row{
+    display:flex;justify-content:space-between;
+    font-family:'JetBrains Mono',monospace;font-size:11px;
+    padding:9px 0;
+    border-bottom:1px dashed rgba(43,38,32,0.18);
+  }
+  .ledger-row span:last-child{color:#8A7F6B;}
+  .stitch{
+    width:64px;height:2px;
+    background-image:repeating-linear-gradient(90deg, var(--amber) 0 6px, transparent 6px 12px);
+    margin:0 -4px;
+    align-self:center;
+  }
+  .arrow-mark{
+    color:var(--amber);font-size:20px;align-self:center;margin:0 -6px;
+  }
+  .phone{
+    width:200px;height:320px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:26px;
+    padding:16px 14px;
+    box-shadow:0 24px 60px rgba(0,0,0,0.5);
+    transform:rotate(3deg);
+    flex-shrink:0;
+  }
+  .phone .bar{
+    height:9px;border-radius:5px;
+    background:var(--surface-2);margin-bottom:8px;
+  }
+  .phone .bar.short{width:55%;}
+  .phone .stat{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--surface-2);
+    border-radius:8px;padding:10px 12px;margin-bottom:8px;
+  }
+  .phone .stat .num{font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;color:var(--amber);}
+  .phone .stat .lbl{font-size:10px;color:var(--ink-muted);font-family:'Inter',sans-serif;}
+  .phone .row-mini{
+    display:flex;justify-content:space-between;
+    font-size:10px;color:var(--ink-muted);
+    padding:7px 2px;border-bottom:1px solid var(--line);
+  }
+
+  /* ---------- SECTIONS ---------- */
+  section{padding:64px 0;}
+  .section-head{max-width:520px;margin-bottom:40px;}
+  .section-eyebrow{
+    font-family:'JetBrains Mono',monospace;font-size:12px;
+    color:var(--amber);text-transform:uppercase;letter-spacing:0.1em;
+    margin-bottom:12px;display:block;
+  }
+  .section-head h2{font-size:clamp(24px,4vw,32px);line-height:1.25;}
+  .section-head p{color:var(--ink-muted);margin-top:12px;font-size:15px;line-height:1.6;}
+
+  /* who it's for */
+  .who-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  }
+  .who-card{
+    background:var(--surface);padding:26px 22px;
+  }
+  .who-card .tag{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-muted);
+    display:block;margin-bottom:10px;
+  }
+  .who-card h3{font-size:17px;font-weight:600;margin-bottom:8px;}
+  .who-card p{font-size:14px;color:var(--ink-muted);line-height:1.55;margin:0;}
+
+  /* how it works */
+  .steps{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line);}
+  .step{
+    display:grid;grid-template-columns:56px 1fr;gap:20px;
+    padding:26px 0;border-bottom:1px solid var(--line);
+  }
+  .step .num{
+    font-family:'Poppins',sans-serif;font-weight:700;font-size:22px;color:var(--amber);
+  }
+  .step h3{font-size:17px;font-weight:600;margin-bottom:6px;}
+  .step p{font-size:14px;color:var(--ink-muted);margin:0;line-height:1.6;max-width:56ch;}
+
+  /* what you get */
+  .get-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;}
+  .get-card{
+    border:1px solid var(--line);border-radius:12px;padding:20px;
+    background:linear-gradient(180deg, rgba(255,159,28,0.04), transparent);
+  }
+  .get-card .ic{color:var(--amber);font-size:18px;margin-bottom:10px;}
+  .get-card h3{font-size:15px;font-weight:600;margin-bottom:6px;}
+  .get-card p{font-size:13px;color:var(--ink-muted);margin:0;line-height:1.5;}
+
+  /* cta */
+  .cta-band{
+    border:1px solid rgba(255,159,28,0.28);
+    background:radial-gradient(120% 140% at 0% 0%, rgba(255,159,28,0.12), transparent 60%), var(--surface);
+    border-radius:20px;padding:44px 32px;text-align:center;
+  }
+  .cta-band h2{font-size:clamp(22px,4vw,30px);max-width:20ch;margin:0 auto;}
+  .cta-band p{color:var(--ink-muted);margin-top:12px;font-size:15px;}
+  .cta-band .btn-primary{margin-top:24px;}
+
+  footer{
+    border-top:1px solid var(--line);
+    padding:32px 0 48px;
+    color:var(--ink-muted);font-size:13px;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  }
+
+  @media (max-width:640px){
+    .transform{gap:6px;}
+    .stitch{width:28px;}
+    .ledger,.phone{transform:none;}
+    footer{flex-direction:column;text-align:center;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+  }
 </style>
 </head>
 <body>
-  <div>
-    <h1>TrackMyApp</h1>
-    <p>Custom business apps for growing companies.</p>
+
+<nav>
+  <div class="logo"><span class="dot"></span>trackmyapp<span style="color:var(--amber)">.in</span></div>
+  <a class="nav-cta" href="https://wa.me/?text=Hi%2C%20I%27d%20like%20to%20know%20more%20about%20TrackMyApp" target="_blank" rel="noopener">Talk to us</a>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">● built for businesses, not developers</span>
+    <h1>Your notebook.<br>Now an <em>app.</em></h1>
+    <p class="sub">We build small, custom apps for businesses that currently run on Excel sheets, WhatsApp messages and paper registers — vehicle logs, expense tracking, customer records, whatever you're keeping track of by hand today.</p>
+    <div class="hero-ctas">
+      <a class="btn-primary" href="https://wa.me/?text=Hi%2C%20I%27d%20like%20a%20demo%20of%20TrackMyApp" target="_blank" rel="noopener">Ask for a demo →</a>
+      <a class="btn-ghost" href="#how">See how it works</a>
+    </div>
+
+    <div class="transform" aria-hidden="true">
+      <div class="ledger">
+        <div class="ledger-head">Daily Register</div>
+        <div class="ledger-row"><span>Trip — KA01 4521</span><span>₹1,200</span></div>
+        <div class="ledger-row"><span>Fuel — Diesel</span><span>₹2,400</span></div>
+        <div class="ledger-row"><span>Driver — Selvam</span><span>✓</span></div>
+        <div class="ledger-row"><span>Service due</span><span>12 days</span></div>
+        <div class="ledger-row" style="border-bottom:none;"><span>Balance</span><span>₹8,650</span></div>
+      </div>
+      <div class="stitch"></div>
+      <span class="arrow-mark">→</span>
+      <div class="stitch"></div>
+      <div class="phone">
+        <div class="bar short"></div>
+        <div class="bar" style="width:80%;"></div>
+        <div class="stat"><span class="lbl">This month</span><span class="num">₹42,800</span></div>
+        <div class="row-mini"><span>Trip — KA01 4521</span><span>₹1,200</span></div>
+        <div class="row-mini"><span>Fuel — Diesel</span><span>₹2,400</span></div>
+        <div class="row-mini"><span>Driver — Selvam</span><span>✓ Done</span></div>
+        <div class="row-mini" style="border-bottom:none;"><span>Service due</span><span>12 days</span></div>
+      </div>
+    </div>
   </div>
+</header>
+
+<section id="who">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow">Built for real businesses</span>
+      <h2>If you're tracking it by hand, we can turn it into an app.</h2>
+      <p>These are the kinds of businesses we already build for — yours doesn't have to look exactly like these.</p>
+    </div>
+    <div class="who-grid">
+      <div class="who-card">
+        <span class="tag">FLEET &amp; TRAVEL</span>
+        <h3>Cabs &amp; travel operators</h3>
+        <p>Trip logs, driver records, fuel and expense tracking — everything your dispatch register does, in one app.</p>
+      </div>
+      <div class="who-card">
+        <span class="tag">SERVICE</span>
+        <h3>Garages &amp; workshops</h3>
+        <p>Vehicle history, service reminders, invoices and customer records, without the pile of job cards.</p>
+      </div>
+      <div class="who-card">
+        <span class="tag">FINANCE</span>
+        <h3>Chit funds &amp; community accounts</h3>
+        <p>Member ledgers, monthly collections and running balances, tracked cleanly instead of in a notebook.</p>
+      </div>
+      <div class="who-card">
+        <span class="tag">TRADE</span>
+        <h3>Traders &amp; small retailers</h3>
+        <p>Daily sales, supplier ledgers and stock — replacing scattered WhatsApp messages and paper slips.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow">How it works</span>
+      <h2>From your register to a working app, in days.</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="num">01</div>
+        <div>
+          <h3>Tell us what you track</h3>
+          <p>Show us the register, spreadsheet or WhatsApp messages you use today. No technical detail needed — just how your day actually runs.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">02</div>
+        <div>
+          <h3>We build your app</h3>
+          <p>A working demo, customised to your business, ready for you to try on your own phone — before you commit to anything.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">03</div>
+        <div>
+          <h3>You go live</h3>
+          <p>Your team starts using it. Unlimited entries, no per-user fees, and it's built around how you already work.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="get">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow">What you get</span>
+      <h2>Simple, on purpose.</h2>
+    </div>
+    <div class="get-grid">
+      <div class="get-card">
+        <div class="ic">✓</div>
+        <h3>Unlimited entries</h3>
+        <p>Add, edit, track — no caps on records or usage.</p>
+      </div>
+      <div class="get-card">
+        <div class="ic">✓</div>
+        <h3>Your own app</h3>
+        <p>Not a shared platform — your data, your instance.</p>
+      </div>
+      <div class="get-card">
+        <div class="ic">✓</div>
+        <h3>Works on any phone</h3>
+        <p>No install from an app store needed. Just open and use.</p>
+      </div>
+      <div class="get-card">
+        <div class="ic">✓</div>
+        <h3>Try before you pay</h3>
+        <p>A working demo comes first. Nothing to commit to upfront.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="wrap">
+    <div class="cta-band">
+      <h2>Still running your business on Excel and WhatsApp?</h2>
+      <p>Send us a message — we'll set up a free demo built around what you actually track.</p>
+      <a class="btn-primary" href="https://wa.me/?text=Hi%2C%20I%27d%20like%20a%20demo%20of%20TrackMyApp" target="_blank" rel="noopener">Message us on WhatsApp →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;width:100%;">
+    <span>© 2026 trackmyapp.in</span>
+  </div>
+</footer>
+
 </body>
 </html>
