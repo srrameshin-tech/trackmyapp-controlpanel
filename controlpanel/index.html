@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260730-1830">
+<meta name="app-build" content="20260730-1900">
 <meta name="theme-color" content="#0F1729">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -326,6 +326,7 @@ function renderCustomerList(){
         <button style="background:#4A2E1C;color:#FDBA74;border-color:#6B4A2E;" onclick="viewErrors('${id}')">🐞 View Errors</button>
         <button style="background:#2E3B1C;color:#BEF264;border-color:#4A5B2E;" onclick="setActiveDays('${id}')">📅 Set Active Days</button>
         <button style="background:#1C3B3A;color:#5EEAD4;border-color:#2E5B58;" onclick="viewPaymentHistory('${id}')">📜 History</button>
+        <button style="background:#3B2E1C;color:#FCD34D;border-color:#5B4A2E;" onclick="sendAnnouncement('${id}')">📢 Announce</button>
         <button class="ghost" onclick="editCustomer('${id}')">Edit</button>
         <button class="ghost" onclick="deleteCustomer('${id}')" style="color:var(--danger);">Delete</button>
       </div>
@@ -562,6 +563,20 @@ window.viewPaymentHistory = async function(id){
   body.innerHTML = rowsHtml + `<div style="display:flex;justify-content:space-between;padding-top:12px;font-weight:800;">
     <div>Total Collected</div><div style="color:#4ADE80;">₹${total}</div>
   </div>`;
+};
+
+window.sendAnnouncement = async function(id){
+  const companyName = customers[id]?.companyName || 'this customer';
+  const msg = prompt("Announcement message for "+companyName+"'s app\n(shown as a banner on their Home screen — leave blank to clear existing announcement):");
+  if(msg === null) return;
+  await withCustomerFirebase(id, async (custDb, rootPath)=>{
+    if(msg.trim()){
+      await update(ref(custDb, rootPath+'/announcement'), {message: msg.trim(), active: true, ts: Date.now()});
+    } else {
+      await update(ref(custDb, rootPath+'/announcement'), {active: false});
+    }
+  });
+  showToast(msg.trim() ? 'Announcement sent' : 'Announcement cleared');
 };
 
 /* ---------- Service Worker + Auto Update ---------- */
