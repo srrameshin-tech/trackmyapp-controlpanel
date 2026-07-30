@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260730-1810">
+<meta name="app-build" content="20260730-1830">
 <meta name="theme-color" content="#0F1729">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -171,6 +171,17 @@ main{padding:16px;}
   </div>
 </div>
 
+<!-- Payment History Modal -->
+<div class="overlay" id="historyModal">
+  <div class="sheet">
+    <h2 id="historyTitle">📜 Payment History</h2>
+    <div id="historyBody" style="max-height:55vh;overflow-y:auto;margin-bottom:14px;"></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('historyModal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -314,6 +325,7 @@ function renderCustomerList(){
         <button style="background:#3B2E5C;color:#C4B5FD;border-color:#5B4A8A;" onclick="resetCustomerPin('${id}')">🔑 Reset PIN</button>
         <button style="background:#4A2E1C;color:#FDBA74;border-color:#6B4A2E;" onclick="viewErrors('${id}')">🐞 View Errors</button>
         <button style="background:#2E3B1C;color:#BEF264;border-color:#4A5B2E;" onclick="setActiveDays('${id}')">📅 Set Active Days</button>
+        <button style="background:#1C3B3A;color:#5EEAD4;border-color:#2E5B58;" onclick="viewPaymentHistory('${id}')">📜 History</button>
         <button class="ghost" onclick="editCustomer('${id}')">Edit</button>
         <button class="ghost" onclick="deleteCustomer('${id}')" style="color:var(--danger);">Delete</button>
       </div>
@@ -501,6 +513,8 @@ window.setActiveDays = async function(id){
   if(!daysStr) return;
   const days = parseInt(daysStr, 10);
   if(!days || days <= 0){ showToast('Enter a valid number of days'); return; }
+  const amountStr = prompt("Amount received (₹) — optional, leave blank to skip:");
+  const amount = amountStr && amountStr.trim() ? parseFloat(amountStr.trim()) : null;
   const today = new Date();
   const expiry = new Date(today);
   expiry.setDate(today.getDate() + days);
@@ -514,7 +528,40 @@ window.setActiveDays = async function(id){
   });
   if(liveStatus[id].checking) liveStatus[id] = {status:'unknown', checking:false};
   renderCustomerList();
+  await push(ref(db, ROOT+'/paymentHistory/'+id), {
+    date: lastPayment, days, amount, expiryDate
+  });
   showToast('Active for '+days+' days — expires '+expiryDate);
+};
+
+window.viewPaymentHistory = async function(id){
+  const companyName = customers[id]?.companyName || 'Customer';
+  document.getElementById('historyTitle').textContent = '📜 '+companyName+' — Payment History';
+  const body = document.getElementById('historyBody');
+  body.innerHTML = '<div style="color:var(--muted);font-size:13px;">Loading…</div>';
+  document.getElementById('historyModal').classList.add('show');
+
+  const snap = await get(ref(db, ROOT+'/paymentHistory/'+id));
+  const records = snap.val() || {};
+  const list = Object.values(records).sort((a,b)=> b.date.localeCompare(a.date));
+  if(!list.length){
+    body.innerHTML = '<div style="color:var(--muted);font-size:13px;">No payment records yet. Use "Set Active Days" to log one.</div>';
+    return;
+  }
+  let total = 0;
+  const rowsHtml = list.map(r=>{
+    if(r.amount) total += r.amount;
+    return `<div style="border-bottom:1px solid var(--border);padding:10px 0;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-weight:700;font-size:13px;">${r.date}</div>
+        <div style="font-size:11.5px;color:var(--muted);">${r.days} days · expires ${r.expiryDate}</div>
+      </div>
+      <div style="font-weight:800;color:#4ADE80;font-size:14px;">${r.amount ? '₹'+r.amount : '—'}</div>
+    </div>`;
+  }).join('');
+  body.innerHTML = rowsHtml + `<div style="display:flex;justify-content:space-between;padding-top:12px;font-weight:800;">
+    <div>Total Collected</div><div style="color:#4ADE80;">₹${total}</div>
+  </div>`;
 };
 
 /* ---------- Service Worker + Auto Update ---------- */
