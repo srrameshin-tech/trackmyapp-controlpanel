@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260730-1935">
+<meta name="app-build" content="20260730-2010">
 <meta name="theme-color" content="#0F1729">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -182,6 +182,38 @@ main{padding:16px;}
   </div>
 </div>
 
+<!-- Flash Ticker Modal -->
+<div class="overlay" id="flashTickerModal">
+  <div class="sheet">
+    <h2 id="flashTickerTitle">🎫 Flash Ticker</h2>
+    <div class="fgroup"><label>Message</label><textarea id="flashMsgText" placeholder="e.g. 🎉 Yearly offer ₹2500 — renew now!"></textarea></div>
+    <div class="fgroup"><label>Speed</label>
+      <select id="flashMsgSpeed">
+        <option value="35">🐢 Slow</option>
+        <option value="22" selected>🚶 Medium</option>
+        <option value="12">🏃 Fast</option>
+      </select>
+    </div>
+    <div class="fgroup"><label>Color</label>
+      <select id="flashMsgColor">
+        <option value="#FFC800">🟡 Gold</option>
+        <option value="#22D3A5">🟢 Green</option>
+        <option value="#3B82F6">🔵 Blue</option>
+        <option value="#F0576B">🔴 Red</option>
+        <option value="#FFFFFF">⚪ White</option>
+      </select>
+    </div>
+    <div class="fgroup" style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="flashMsgEnabled" style="width:auto;">
+      <label style="margin:0;text-transform:none;font-size:13px;color:var(--text);">Enable (show on customer's Home screen)</label>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('flashTickerModal')">Cancel</button>
+      <button class="btn primary" onclick="saveFlashTicker()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -327,6 +359,7 @@ function renderCustomerList(){
         <button style="background:#2E3B1C;color:#BEF264;border-color:#4A5B2E;" onclick="setActiveDays('${id}')">📅 Set Active Days</button>
         <button style="background:#1C3B3A;color:#5EEAD4;border-color:#2E5B58;" onclick="viewPaymentHistory('${id}')">📜 History</button>
         <button style="background:#3B2E1C;color:#FCD34D;border-color:#5B4A2E;" onclick="sendAnnouncement('${id}')">📢 Announce</button>
+        <button style="background:#1A1400;color:#FFC800;border-color:#4A3E1C;" onclick="openFlashTicker('${id}')">🎫 Flash Ticker</button>
         <button class="ghost" onclick="editCustomer('${id}')">Edit</button>
         <button class="ghost" onclick="deleteCustomer('${id}')" style="color:var(--danger);">Delete</button>
       </div>
@@ -608,6 +641,42 @@ window.sendAnnouncement = async function(id){
     }
   });
   showToast(msg.trim() ? 'Announcement sent' : 'Announcement cleared');
+};
+
+let flashTickerCustomerId = null;
+window.openFlashTicker = async function(id){
+  flashTickerCustomerId = id;
+  const companyName = customers[id]?.companyName || 'Customer';
+  document.getElementById('flashTickerTitle').textContent = '🎫 '+companyName+' — Flash Ticker';
+  document.getElementById('flashMsgText').value = '';
+  document.getElementById('flashMsgSpeed').value = '22';
+  document.getElementById('flashMsgColor').value = '#FFC800';
+  document.getElementById('flashMsgEnabled').checked = false;
+  document.getElementById('flashTickerModal').classList.add('show');
+  await withCustomerFirebase(id, async (custDb, rootPath)=>{
+    const snap = await get(ref(custDb, rootPath+'/flashMessage'));
+    const data = snap.val();
+    if(data){
+      document.getElementById('flashMsgText').value = data.text || '';
+      document.getElementById('flashMsgSpeed').value = String(data.speedSec || 22);
+      document.getElementById('flashMsgColor').value = data.color || '#FFC800';
+      document.getElementById('flashMsgEnabled').checked = !!data.enabled;
+    }
+  });
+};
+window.saveFlashTicker = async function(){
+  const id = flashTickerCustomerId;
+  if(!id) return;
+  const text = document.getElementById('flashMsgText').value.trim();
+  const speedSec = parseInt(document.getElementById('flashMsgSpeed').value, 10);
+  const color = document.getElementById('flashMsgColor').value;
+  const enabled = document.getElementById('flashMsgEnabled').checked;
+  if(enabled && !text){ showToast('Enter a message before enabling'); return; }
+  await withCustomerFirebase(id, async (custDb, rootPath)=>{
+    await update(ref(custDb, rootPath+'/flashMessage'), {text, speedSec, color, enabled, updatedAt: Date.now()});
+  });
+  closeModal('flashTickerModal');
+  showToast('Flash ticker saved');
 };
 
 /* ---------- Service Worker + Auto Update ---------- */
