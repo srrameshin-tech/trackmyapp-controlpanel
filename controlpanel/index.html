@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260730-2035">
+<meta name="app-build" content="20260730-2140">
 <meta name="theme-color" content="#0F1729">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -422,7 +422,7 @@ window.deleteCustomer = async function(id){
 async function withCustomerFirebase(id, callback){
   const c = customers[id];
   if(!c.apiKey || !c.dbUrl || !c.adminEmail || !c.adminPassword || !c.rootPath){
-    showToast('Missing Firebase/admin details for this customer'); return;
+    showToast('Missing Firebase/admin details for this customer'); return false;
   }
   const instanceName = 'cust_'+id;
   let custApp;
@@ -433,16 +433,19 @@ async function withCustomerFirebase(id, callback){
   }
   const custAuth = getAuth(custApp);
   const custDb = getDatabase(custApp);
+  let success = false;
   try{
     await signInWithEmailAndPassword(custAuth, c.adminEmail, c.adminPassword);
     await callback(custDb, c.rootPath);
+    success = true;
   } catch(err){
     console.error(err);
-    showToast('Connection failed — check credentials');
+    showToast('Connection failed: '+(err.code || err.message || 'unknown error'));
   } finally {
     try{ await signOut(custAuth); }catch(e){}
     try{ await deleteApp(custApp); }catch(e){}
   }
+  return success;
 }
 
 window.checkStatus = async function(id){
@@ -480,10 +483,10 @@ window.resetCustomerPin = async function(id){
   if(!pin) return;
   if(!/^\d{4}$/.test(pin)){ showToast('PIN must be exactly 4 digits'); return; }
   const hash = await sha256(pin);
-  await withCustomerFirebase(id, async (custDb, rootPath)=>{
+  const ok = await withCustomerFirebase(id, async (custDb, rootPath)=>{
     await update(ref(custDb, rootPath+'/config'), {pinHash: hash});
   });
-  showToast('PIN reset to '+pin);
+  if(ok) showToast('PIN reset to '+pin);
 };
 
 window.viewErrors = async function(id){
@@ -638,14 +641,14 @@ window.sendAnnouncement = async function(id){
   const companyName = customers[id]?.companyName || 'this customer';
   const msg = prompt("Announcement message for "+companyName+"'s app\n(shown as a banner on their Home screen — leave blank to clear existing announcement):");
   if(msg === null) return;
-  await withCustomerFirebase(id, async (custDb, rootPath)=>{
+  const ok = await withCustomerFirebase(id, async (custDb, rootPath)=>{
     if(msg.trim()){
       await update(ref(custDb, rootPath+'/announcement'), {message: msg.trim(), active: true, ts: Date.now()});
     } else {
       await update(ref(custDb, rootPath+'/announcement'), {active: false});
     }
   });
-  showToast(msg.trim() ? 'Announcement sent' : 'Announcement cleared');
+  if(ok) showToast(msg.trim() ? 'Announcement sent' : 'Announcement cleared');
 };
 
 let flashTickerCustomerId = null;
@@ -687,11 +690,13 @@ window.saveFlashTicker = async function(){
   const color = colorSelect === 'custom' ? document.getElementById('flashMsgColorCustom').value : colorSelect;
   const enabled = document.getElementById('flashMsgEnabled').checked;
   if(enabled && !text){ showToast('Enter a message before enabling'); return; }
-  await withCustomerFirebase(id, async (custDb, rootPath)=>{
+  const ok = await withCustomerFirebase(id, async (custDb, rootPath)=>{
     await update(ref(custDb, rootPath+'/flashMessage'), {text, speedSec, color, enabled, updatedAt: Date.now()});
   });
-  closeModal('flashTickerModal');
-  showToast('Flash ticker saved');
+  if(ok){
+    closeModal('flashTickerModal');
+    showToast('Flash ticker saved');
+  }
 };
 
 /* ---------- Service Worker + Auto Update ---------- */
