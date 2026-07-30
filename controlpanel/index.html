@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260730-2010">
+<meta name="app-build" content="20260730-2035">
 <meta name="theme-color" content="#0F1729">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -195,13 +195,18 @@ main{padding:16px;}
       </select>
     </div>
     <div class="fgroup"><label>Color</label>
-      <select id="flashMsgColor">
+      <select id="flashMsgColor" onchange="document.getElementById('flashMsgColorCustomRow').style.display = this.value==='custom' ? 'flex' : 'none';">
         <option value="#FFC800">🟡 Gold</option>
         <option value="#22D3A5">🟢 Green</option>
         <option value="#3B82F6">🔵 Blue</option>
         <option value="#F0576B">🔴 Red</option>
         <option value="#FFFFFF">⚪ White</option>
+        <option value="custom">🎨 Customised…</option>
       </select>
+    </div>
+    <div class="fgroup" id="flashMsgColorCustomRow" style="display:none;align-items:center;gap:10px;">
+      <input type="color" id="flashMsgColorCustom" value="#FFC800" style="width:56px;height:40px;padding:2px;border-radius:8px;">
+      <span style="font-size:12px;color:var(--muted);">Pick any custom color</span>
     </div>
     <div class="fgroup" style="display:flex;align-items:center;gap:8px;">
       <input type="checkbox" id="flashMsgEnabled" style="width:auto;">
@@ -651,6 +656,7 @@ window.openFlashTicker = async function(id){
   document.getElementById('flashMsgText').value = '';
   document.getElementById('flashMsgSpeed').value = '22';
   document.getElementById('flashMsgColor').value = '#FFC800';
+  document.getElementById('flashMsgColorCustomRow').style.display = 'none';
   document.getElementById('flashMsgEnabled').checked = false;
   document.getElementById('flashTickerModal').classList.add('show');
   await withCustomerFirebase(id, async (custDb, rootPath)=>{
@@ -659,7 +665,15 @@ window.openFlashTicker = async function(id){
     if(data){
       document.getElementById('flashMsgText').value = data.text || '';
       document.getElementById('flashMsgSpeed').value = String(data.speedSec || 22);
-      document.getElementById('flashMsgColor').value = data.color || '#FFC800';
+      const presetColors = ['#FFC800','#22D3A5','#3B82F6','#F0576B','#FFFFFF'];
+      const savedColor = data.color || '#FFC800';
+      if(presetColors.includes(savedColor)){
+        document.getElementById('flashMsgColor').value = savedColor;
+      } else {
+        document.getElementById('flashMsgColor').value = 'custom';
+        document.getElementById('flashMsgColorCustom').value = savedColor;
+        document.getElementById('flashMsgColorCustomRow').style.display = 'flex';
+      }
       document.getElementById('flashMsgEnabled').checked = !!data.enabled;
     }
   });
@@ -669,7 +683,8 @@ window.saveFlashTicker = async function(){
   if(!id) return;
   const text = document.getElementById('flashMsgText').value.trim();
   const speedSec = parseInt(document.getElementById('flashMsgSpeed').value, 10);
-  const color = document.getElementById('flashMsgColor').value;
+  const colorSelect = document.getElementById('flashMsgColor').value;
+  const color = colorSelect === 'custom' ? document.getElementById('flashMsgColorCustom').value : colorSelect;
   const enabled = document.getElementById('flashMsgEnabled').checked;
   if(enabled && !text){ showToast('Enter a message before enabling'); return; }
   await withCustomerFirebase(id, async (custDb, rootPath)=>{
