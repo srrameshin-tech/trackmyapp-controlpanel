@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260729-1610">
+<meta name="app-build" content="20260730-1755">
 <meta name="theme-color" content="#0F1729">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -153,6 +153,19 @@ main{padding:16px;}
   </div>
 </div>
 
+<!-- Error Logs Modal -->
+<div class="overlay" id="errorLogsModal">
+  <div class="sheet">
+    <h2 id="errorLogsTitle">🐞 Errors</h2>
+    <div id="errorLogsBody" style="max-height:50vh;overflow-y:auto;margin-bottom:14px;"></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('errorLogsModal')">Close</button>
+      <button class="btn ghost" id="errorLogsCopyBtn" style="border-color:var(--accent);color:var(--accent);">📋 Copy</button>
+      <button class="btn primary" id="errorLogsMarkBtn" style="background:#4A2E1C;">Mark all reviewed</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -279,6 +292,7 @@ function renderCustomerList(){
         <button class="primary" onclick="toggleLicense('${id}', true)">✅ Enable</button>
         <button class="danger-btn" onclick="toggleLicense('${id}', false)">⛔ Suspend</button>
         <button style="background:#3B2E5C;color:#C4B5FD;border-color:#5B4A8A;" onclick="resetCustomerPin('${id}')">🔑 Reset PIN</button>
+        <button style="background:#4A2E1C;color:#FDBA74;border-color:#6B4A2E;" onclick="viewErrors('${id}')">🐞 View Errors</button>
         <button style="background:#2E3B1C;color:#BEF264;border-color:#4A5B2E;" onclick="setActiveDays('${id}')">📅 Set Active Days</button>
         <button class="ghost" onclick="editCustomer('${id}')">Edit</button>
         <button class="ghost" onclick="deleteCustomer('${id}')" style="color:var(--danger);">Delete</button>
@@ -399,6 +413,66 @@ window.resetCustomerPin = async function(id){
     await update(ref(custDb, rootPath+'/config'), {pinHash: hash});
   });
   showToast('PIN reset to '+pin);
+};
+
+window.viewErrors = async function(id){
+  const companyName = customers[id]?.companyName || 'Customer';
+  document.getElementById('errorLogsTitle').textContent = '🐞 '+companyName+' — Errors';
+  document.getElementById('errorLogsBody').innerHTML = '<div style="color:var(--muted);font-size:13px;">Loading…</div>';
+  document.getElementById('errorLogsCopyBtn').onclick = null;
+  document.getElementById('errorLogsMarkBtn').onclick = null;
+  document.getElementById('errorLogsModal').classList.add('show');
+
+  let groupList = [], allIds = [];
+  await withCustomerFirebase(id, async (custDb, rootPath)=>{
+    const snap = await get(ref(custDb, rootPath+'/errorLogs'));
+    const logs = snap.val() || {};
+    const unresolved = Object.entries(logs).filter(([lid,v])=> !v.seen);
+    allIds = unresolved.map(([lid])=>lid);
+    const groups = {};
+    unresolved.forEach(([lid,v])=>{
+      const key = (v.type||'')+'|'+(v.message||'');
+      if(!groups[key]) groups[key] = {type:v.type, message:v.message, extra:v.extra, count:0, lastTime:v.time};
+      groups[key].count++;
+      if(v.time > groups[key].lastTime) groups[key].lastTime = v.time;
+    });
+    groupList = Object.values(groups).sort((a,b)=> b.lastTime.localeCompare(a.lastTime));
+  });
+
+  const body = document.getElementById('errorLogsBody');
+  if(!groupList.length){
+    body.innerHTML = '<div style="color:#4ADE80;font-size:13px;">✅ No unresolved errors in the last logs.</div>';
+    document.getElementById('errorLogsMarkBtn').style.display = 'none';
+    document.getElementById('errorLogsCopyBtn').style.display = 'none';
+    return;
+  }
+  document.getElementById('errorLogsMarkBtn').style.display = '';
+  document.getElementById('errorLogsCopyBtn').style.display = '';
+  body.innerHTML = groupList.map(g=>{
+    const t = new Date(g.lastTime).toLocaleString('en-IN');
+    return `<div style="border-bottom:1px solid var(--border);padding:10px 0;">
+      <div style="font-weight:700;color:var(--danger);font-size:13px;">${(g.type||'Error')}: ${(g.message||'').replace(/</g,'&lt;')}</div>
+      <div style="font-size:11.5px;color:var(--muted);">(${g.count}x, last: ${t})</div>
+      ${g.extra ? `<div style="font-size:11.5px;color:var(--muted);">↳ ${g.extra.replace(/</g,'&lt;')}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('errorLogsCopyBtn').onclick = ()=>{
+    const text = companyName+' Errors:\n\n'+groupList.map(g=> `• ${g.type}: ${g.message}\n   (${g.count}x, last: ${new Date(g.lastTime).toLocaleString('en-IN')})\n   ↳ ${g.extra||''}`).join('\n\n');
+    navigator.clipboard.writeText(text).then(()=> showToast('Copied')).catch(()=>{
+      const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+      showToast('Copied');
+    });
+  };
+  document.getElementById('errorLogsMarkBtn').onclick = async ()=>{
+    await withCustomerFirebase(id, async (custDb, rootPath)=>{
+      const updates = {};
+      allIds.forEach(lid=> updates[rootPath+'/errorLogs/'+lid+'/seen'] = true);
+      await update(ref(custDb), updates);
+    });
+    closeModal('errorLogsModal');
+    showToast('Marked reviewed');
+  };
 };
 
 window.setActiveDays = async function(id){
