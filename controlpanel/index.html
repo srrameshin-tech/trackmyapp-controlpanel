@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260730-1900">
+<meta name="app-build" content="20260730-1935">
 <meta name="theme-color" content="#0F1729">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -544,25 +544,56 @@ window.viewPaymentHistory = async function(id){
 
   const snap = await get(ref(db, ROOT+'/paymentHistory/'+id));
   const records = snap.val() || {};
-  const list = Object.values(records).sort((a,b)=> b.date.localeCompare(a.date));
+  const list = Object.entries(records).sort((a,b)=> b[1].date.localeCompare(a[1].date));
   if(!list.length){
     body.innerHTML = '<div style="color:var(--muted);font-size:13px;">No payment records yet. Use "Set Active Days" to log one.</div>';
     return;
   }
   let total = 0;
-  const rowsHtml = list.map(r=>{
+  const rowsHtml = list.map(([rid,r])=>{
     if(r.amount) total += r.amount;
-    return `<div style="border-bottom:1px solid var(--border);padding:10px 0;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <div style="font-weight:700;font-size:13px;">${r.date}</div>
-        <div style="font-size:11.5px;color:var(--muted);">${r.days} days · expires ${r.expiryDate}</div>
+    return `<div style="border-bottom:1px solid var(--border);padding:10px 0;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;font-size:13px;">${r.date}</div>
+          <div style="font-size:11.5px;color:var(--muted);">${r.days} days · expires ${r.expiryDate}</div>
+        </div>
+        <div style="font-weight:800;color:#4ADE80;font-size:14px;">${r.amount ? '₹'+r.amount : '—'}</div>
       </div>
-      <div style="font-weight:800;color:#4ADE80;font-size:14px;">${r.amount ? '₹'+r.amount : '—'}</div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button style="flex:1;padding:6px;border-radius:7px;font-size:11.5px;font-weight:600;border:1px solid var(--border);background:var(--surface2);color:#A3E635;" onclick="editPaymentRecord('${id}','${rid}')">Edit</button>
+        <button style="flex:1;padding:6px;border-radius:7px;font-size:11.5px;font-weight:600;border:1px solid var(--border);background:var(--surface2);color:var(--danger);" onclick="deletePaymentRecord('${id}','${rid}')">Delete</button>
+      </div>
     </div>`;
   }).join('');
   body.innerHTML = rowsHtml + `<div style="display:flex;justify-content:space-between;padding-top:12px;font-weight:800;">
     <div>Total Collected</div><div style="color:#4ADE80;">₹${total}</div>
   </div>`;
+};
+
+window.editPaymentRecord = async function(custId, recordId){
+  const snap = await get(ref(db, ROOT+'/paymentHistory/'+custId+'/'+recordId));
+  const r = snap.val();
+  if(!r){ showToast('Record not found'); return; }
+  const daysStr = prompt("Days:", r.days);
+  if(daysStr === null) return;
+  const days = parseInt(daysStr, 10);
+  if(!days || days <= 0){ showToast('Enter a valid number of days'); return; }
+  const amountStr = prompt("Amount (₹) — leave blank for none:", r.amount != null ? r.amount : '');
+  const amount = amountStr && amountStr.trim() ? parseFloat(amountStr.trim()) : null;
+  const expiry = new Date(r.date);
+  expiry.setDate(expiry.getDate() + days);
+  const expiryDate = expiry.toISOString().slice(0,10);
+  await update(ref(db, ROOT+'/paymentHistory/'+custId+'/'+recordId), {days, amount, expiryDate});
+  showToast('Record updated');
+  viewPaymentHistory(custId);
+};
+
+window.deletePaymentRecord = async function(custId, recordId){
+  if(!confirm('Delete this payment record? (Does NOT change the app\'s live license/expiry)')) return;
+  await remove(ref(db, ROOT+'/paymentHistory/'+custId+'/'+recordId));
+  showToast('Record deleted');
+  viewPaymentHistory(custId);
 };
 
 window.sendAnnouncement = async function(id){
