@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TrackMyApp — Control Panel</title>
-<meta name="app-build" content="20260730-2140">
+<meta name="app-build" content="20260731-0430">
 <meta name="theme-color" content="#0F1729">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -131,6 +131,7 @@ main{padding:16px;}
       <div class="summary-box active"><div class="num" id="summaryActive">0</div><div class="lbl">Active</div></div>
       <div class="summary-box suspended"><div class="num" id="summarySuspended">0</div><div class="lbl">Suspended</div></div>
       <div class="summary-box renewal"><div class="num" id="summaryRenewal">0</div><div class="lbl">Renewal Due</div></div>
+      <div class="summary-box" style="border-color:#94A3B8;"><div class="num" id="summaryInactive" style="color:#94A3B8;">0</div><div class="lbl" style="color:#94A3B8;">Inactive 7d+</div></div>
     </div>
     <div id="customerList"></div>
   </main>
@@ -317,15 +318,18 @@ document.querySelectorAll('.overlay').forEach(o=> o.addEventListener('click', e=
 function renderCustomerList(){
   const ids = Object.keys(customers);
   document.getElementById('summaryTotal').textContent = ids.length;
-  let activeCount=0, suspCount=0, renewalCount=0;
+  let activeCount=0, suspCount=0, renewalCount=0, inactiveCount=0;
   ids.forEach(id=>{
     const s=(liveStatus[id]||{}).status; if(s==='active') activeCount++; if(s==='suspended') suspCount++;
     const exp = (liveStatus[id]||{}).expiryDate;
     if(exp){ const days = Math.ceil((new Date(exp) - new Date()) / 86400000); if(days <= 7) renewalCount++; }
+    const lastActive = (liveStatus[id]||{}).lastActive;
+    if(lastActive){ const idleDays = Math.floor((Date.now() - new Date(lastActive).getTime()) / 86400000); if(idleDays >= 7) inactiveCount++; }
   });
   document.getElementById('summaryActive').textContent = activeCount;
   document.getElementById('summarySuspended').textContent = suspCount;
   document.getElementById('summaryRenewal').textContent = renewalCount;
+  document.getElementById('summaryInactive').textContent = inactiveCount;
 
   const container = document.getElementById('customerList');
   if(!ids.length){ container.innerHTML = '<div class="empty-state">No customer apps yet.<br>Tap + to add one.</div>'; return; }
@@ -343,8 +347,16 @@ function renderCustomerList(){
         renewalBannerHtml = `<div class="renewal-banner">⚠️ Renewal due soon — ${days}d left</div>`;
       }
     }
+    let inactiveBannerHtml = '';
+    if(st.lastActive){
+      const idleDays = Math.floor((Date.now() - new Date(st.lastActive).getTime()) / 86400000);
+      if(idleDays >= 7){
+        inactiveBannerHtml = `<div class="renewal-banner" style="background:rgba(148,163,184,0.15);border-color:#94A3B8;color:#94A3B8;">⏰ No activity in ${idleDays}d — customer may not be using the app</div>`;
+      }
+    }
     return `<div class="customer-card">
       ${renewalBannerHtml}
+      ${inactiveBannerHtml}
       <div class="ct-top">
         <div>
           <div class="ct-name">${c.companyName}</div>
